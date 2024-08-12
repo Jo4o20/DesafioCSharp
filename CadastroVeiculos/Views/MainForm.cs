@@ -1,14 +1,11 @@
 ﻿using CadastroVeiculos.Data;
 using CadastroVeiculos.Models;
-using CadastroVeiculos.Service;
 using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -16,79 +13,229 @@ namespace CadastroVeiculos.Views
 {
     public partial class MainForm : Form
     {
-
-        MySqlConnection Conexao;
+        private MySqlConnection _conexao;
+        private static readonly HttpClient _httpClient = new HttpClient();
 
         public MainForm()
         {
             InitializeComponent();
+            RegisterEventHandlers();
+            ObterMarcas();  // Carrega as marcas ao iniciar o formulário
+        }
 
-            // Adicionando os eventos de click no formulario
-            this.dgvVeiculos.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvVeiculos_CellClick);
-            this.btnEditar.Click += new System.EventHandler(this.btnEditar_Click);
-            this.btnExcluir.Click += new System.EventHandler(this.btnExcluir_Click);
-
-
+        private void RegisterEventHandlers()
+        {
+            // Eventos dos botões e do DataGridView
+            dgvVeiculos.CellClick += dgvVeiculos_CellClick;
+            btnEditar.Click += btnEditar_Click;
+            btnExcluir.Click += btnExcluir_Click;
+            btnAdicionar.Click += btnAdicionar_Click;
+            btnLimpar.Click += btnLimpar_Click;
+            cmbMarcas.SelectedIndexChanged += cmbMarcas_SelectedIndexChanged;  // Adiciona o evento para quando a marca é selecionada
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            // Carrega os dados dos veículos no DataGridView ao carregar o formulário
-            CarregarVeiculos();
+            LoadVeiculos();  // Carrega os veículos ao iniciar o formulário
         }
 
-        private void CarregarVeiculos()
+        private void LoadVeiculos()
         {
             try
             {
-                // Usando a classe ConexaoBD para obter a conexão
-                MySqlConnection conexao = ConexaoBD.GetConnection();
+                _conexao = ConexaoBD.GetConnection();
 
-                if (conexao != null)
+                if (_conexao != null)
                 {
-                    // Criação do comando SQL para seleção
                     string query = "SELECT * FROM Veiculos";
-                    MySqlCommand cmd = new MySqlCommand(query, conexao);
-                    MySqlDataAdapter da = new MySqlDataAdapter(cmd);
-                    DataTable dt = new DataTable();
-
-                    // Preenche o DataTable com os dados
-                    da.Fill(dt);
-
-                    // Define o DataSource do DataGridView como o DataTable preenchido
-                    dgvVeiculos.DataSource = dt;
-
-                    // Fecha a conexão após o uso
-                    conexao.Close();
+                    using (MySqlCommand cmd = new MySqlCommand(query, _conexao))
+                    using (MySqlDataAdapter da = new MySqlDataAdapter(cmd))
+                    {
+                        DataTable veiculosTable = new DataTable();
+                        da.Fill(veiculosTable);
+                        dgvVeiculos.DataSource = veiculosTable;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erro: " + ex.Message);
+                MessageBox.Show($"Erro ao carregar veículos: {ex.Message}");
+            }
+            finally
+            {
+                _conexao?.Close(); // Fecha a conexão após o uso
             }
         }
 
-        private Veiculo ObterVeiculo()
+        private Veiculo ObterVeiculoDoFormulario()
         {
-            Veiculo veiculo = new Veiculo();
-
-            veiculo.Placa = txtPlaca.Text;
-            veiculo.Chassi = txtChassi.Text;
-            veiculo.Marca = txtMarca.Text;
-            veiculo.Modelo = txtModelo.Text;
-            veiculo.AnoFabricacao = int.Parse(txtAnoFabricacao.Text);
-            veiculo.AnoModelo = int.Parse(txtAnoModelo.Text);
-            veiculo.ValorFipe = decimal.Parse(txtValorFipe.Text);
-            veiculo.ValorVenda = decimal.Parse(txtValorVenda.Text);
-            veiculo.Observacoes = txtObservacoes.Text;
-
-            return veiculo;
+            return new Veiculo
+            {
+                Placa = txtPlaca.Text,
+                Chassi = txtChassi.Text,
+                Marca = cmbMarcas.Text,  // Obtém o nome da marca selecionada no ComboBox
+                Modelo = string.Empty,  // Sem uso, manter como string vazia ou remover da inserção no banco
+                AnoFabricacao = int.Parse(txtAnoFabricacao.Text),
+                AnoModelo = int.Parse(txtAnoModelo.Text),
+                ValorFipe = decimal.Parse(txtValorFipe.Text),
+                ValorVenda = decimal.Parse(txtValorVenda.Text),
+                Observacoes = txtObservacoes.Text
+            };
         }
 
-
-        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        private void btnAdicionar_Click(object sender, EventArgs e)
         {
+            ExecuteNonQueryOnVeiculo(
+                "INSERT INTO Veiculos (Placa, Chassi, Marca, Modelo, AnoFabricacao, AnoModelo, ValorFipe, ValorVenda, Observacoes) " +
+                "VALUES (@Placa, @Chassi, @Marca, @Modelo, @AnoFabricacao, @AnoModelo, @ValorFipe, @ValorVenda, @Observacoes)",
+                "Veículo adicionado com sucesso!");
+        }
 
+        private void btnEditar_Click(object sender, EventArgs e)
+        {
+            if (dgvVeiculos.SelectedRows.Count > 0)
+            {
+                int id = Convert.ToInt32(dgvVeiculos.SelectedRows[0].Cells["Id"].Value);
+
+                ExecuteNonQueryOnVeiculo(
+                    "UPDATE Veiculos SET Placa = @Placa, Chassi = @Chassi, Marca = @Marca, Modelo = @Modelo, " +
+                    "AnoFabricacao = @AnoFabricacao, AnoModelo = @AnoModelo, ValorFipe = @ValorFipe, ValorVenda = @ValorVenda, Observacoes = @Observacoes " +
+                    "WHERE Id = @Id",
+                    "Veículo atualizado com sucesso!",
+                    id);
+
+                LoadVeiculos(); // Recarrega os dados após a edição
+                dgvVeiculos.ClearSelection(); // Limpa a seleção após a edição
+                ClearForm(); // Limpa os campos após a edição
+            }
+        }
+
+        private void btnExcluir_Click(object sender, EventArgs e)
+        {
+            if (dgvVeiculos.SelectedRows.Count > 0)
+            {
+                int id = Convert.ToInt32(dgvVeiculos.SelectedRows[0].Cells["Id"].Value);
+
+                DialogResult result = MessageBox.Show("Tem certeza que deseja excluir este veículo?", "Confirmação de Exclusão", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Yes)
+                {
+                    ExecuteNonQueryOnVeiculo(
+                        "DELETE FROM Veiculos WHERE Id = @Id",
+                        "Veículo excluído com sucesso!",
+                        id);
+                }
+            }
+        }
+
+        private void ExecuteNonQueryOnVeiculo(string query, string successMessage, int? id = null)
+        {
+            try
+            {
+                _conexao = ConexaoBD.GetConnection();
+
+                if (_conexao != null)
+                {
+                    using (MySqlCommand cmd = new MySqlCommand(query, _conexao))
+                    {
+                        Veiculo veiculo = ObterVeiculoDoFormulario();
+
+                        cmd.Parameters.AddWithValue("@Placa", veiculo.Placa);
+                        cmd.Parameters.AddWithValue("@Chassi", veiculo.Chassi);
+                        cmd.Parameters.AddWithValue("@Marca", veiculo.Marca);
+                        cmd.Parameters.AddWithValue("@Modelo", veiculo.Modelo);  // Pode ser removido ou substituído
+                        cmd.Parameters.AddWithValue("@AnoFabricacao", veiculo.AnoFabricacao);
+                        cmd.Parameters.AddWithValue("@AnoModelo", veiculo.AnoModelo);
+                        cmd.Parameters.AddWithValue("@ValorFipe", veiculo.ValorFipe);
+                        cmd.Parameters.AddWithValue("@ValorVenda", veiculo.ValorVenda);
+                        cmd.Parameters.AddWithValue("@Observacoes", veiculo.Observacoes);
+
+                        if (id.HasValue)
+                        {
+                            cmd.Parameters.AddWithValue("@Id", id.Value);
+                        }
+
+                        cmd.ExecuteNonQuery();
+
+                        MessageBox.Show(successMessage);
+                        LoadVeiculos(); // Atualiza a lista de veículos
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro: {ex.Message}");
+            }
+            finally
+            {
+                _conexao?.Close(); // Fecha a conexão após o uso
+            }
+        }
+
+        private void dgvVeiculos_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0)
+            {
+                DataGridViewRow row = dgvVeiculos.Rows[e.RowIndex];
+
+                txtPlaca.Text = row.Cells["Placa"].Value.ToString();
+                txtChassi.Text = row.Cells["Chassi"].Value.ToString();
+                cmbMarcas.Text = row.Cells["Marca"].Value.ToString();  // Atualiza o ComboBox de marcas
+                txtAnoFabricacao.Text = row.Cells["AnoFabricacao"].Value.ToString();
+                txtAnoModelo.Text = row.Cells["AnoModelo"].Value.ToString();
+                txtValorFipe.Text = row.Cells["ValorFipe"].Value.ToString();
+                txtValorVenda.Text = row.Cells["ValorVenda"].Value.ToString();
+                txtObservacoes.Text = row.Cells["Observacoes"].Value.ToString();
+            }
+        }
+
+        private void btnLimpar_Click(object sender, EventArgs e)
+        {
+            ClearForm(); // Limpa os campos do formulário
+        }
+
+        private void ClearForm()
+        {
+            txtPlaca.Clear();
+            txtChassi.Clear();
+            cmbMarcas.SelectedIndex = -1;  // Limpa a seleção do ComboBox de marcas
+            txtAnoFabricacao.Clear();
+            txtAnoModelo.Clear();
+            txtValorFipe.Clear();
+            txtValorVenda.Clear();
+            txtObservacoes.Clear();
+        }
+
+        public async Task ObterMarcas()
+        {
+            try
+            {
+                string apiUrl = "https://parallelum.com.br/fipe/api/v1/carros/marcas";
+                HttpResponseMessage response = await _httpClient.GetAsync(apiUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseData = await response.Content.ReadAsStringAsync();
+                    var marcas = JsonSerializer.Deserialize<List<Marcas>>(responseData);
+
+                    cmbMarcas.DataSource = marcas;
+                    cmbMarcas.DisplayMember = "Nome";  // O que será mostrado no ComboBox
+                    cmbMarcas.ValueMember = "Codigo";  // O valor associado ao item
+                }
+                else
+                {
+                    MessageBox.Show("Erro ao carregar as marcas: " + response.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao carregar as marcas: " + ex.Message);
+            }
+        }
+
+        private void cmbMarcas_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Lógica para quando uma marca for selecionada, se necessário
         }
 
         private void txtPlaca_TextChanged(object sender, EventArgs e)
@@ -100,28 +247,7 @@ namespace CadastroVeiculos.Views
         {
 
         }
-
-        private void cmbMarca_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void cmbModelo_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-
         private void txtAnoFabricacao_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void txtMarca_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void txtModelo_TextChanged(object sender, EventArgs e)
         {
 
         }
@@ -136,204 +262,34 @@ namespace CadastroVeiculos.Views
 
         }
 
-        private void txtValorVenda_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
         private void txtObservacoes_TextChanged(object sender, EventArgs e)
         {
 
         }
-
-        private void btnAdicionar_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                // Usando a classe ConexaoBD para obter a conexão
-                MySqlConnection conexao = ConexaoBD.GetConnection();
-
-                if (conexao != null)
-                {
-                    // Criação do comando SQL para inserção
-                    string query = "INSERT INTO Veiculos (Placa, Chassi, Marca, Modelo, AnoFabricacao, AnoModelo, ValorFipe, ValorVenda, Observacoes) " +
-                                   "VALUES (@Placa, @Chassi, @Marca, @Modelo, @AnoFabricacao, @AnoModelo, @ValorFipe, @ValorVenda, @Observacoes)";
-
-                    Veiculo veiculo = ObterVeiculo();
-
-                    MySqlCommand cmd = new MySqlCommand(query, conexao);
-
-                    cmd.Parameters.AddWithValue("@Placa", veiculo.Placa);
-                    cmd.Parameters.AddWithValue("@Chassi", veiculo.Chassi);
-                    cmd.Parameters.AddWithValue("@Marca", veiculo.Marca);
-                    cmd.Parameters.AddWithValue("@Modelo", veiculo.Modelo);
-                    cmd.Parameters.AddWithValue("@AnoFabricacao", veiculo.AnoFabricacao);
-                    cmd.Parameters.AddWithValue("@AnoModelo", veiculo.AnoModelo);
-                    cmd.Parameters.AddWithValue("@ValorFipe", veiculo.ValorFipe);
-                    cmd.Parameters.AddWithValue("@ValorVenda", veiculo.ValorVenda);
-                    cmd.Parameters.AddWithValue("@Observacoes", veiculo.Observacoes);
-
-
-                    // Executa o comando
-                    cmd.ExecuteNonQuery();
-
-                    MessageBox.Show("Veículo adicionado com sucesso!");
-
-                    CarregarVeiculos();
-
-                    // Fecha a conexão após o uso
-                    conexao.Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Erro: " + ex.Message);
-            }
-        }
-
-        private void btnLimpar_Click(object sender, EventArgs e)
-        {
-            // Limpa os campos de texto
-            txtObservacoes.Text = string.Empty;
-            txtValorVenda.Text = string.Empty;
-            txtValorFipe.Text = string.Empty;
-            txtAnoModelo.Text = string.Empty;
-            txtAnoFabricacao.Text = string.Empty;
-            txtChassi.Text = string.Empty;
-            txtPlaca.Text = string.Empty;
-            txtModelo.Text = string.Empty;
-            txtMarca.Text = string.Empty;
-
-        }
-
-        private void btnEditar_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (dgvVeiculos.SelectedRows.Count > 0)
-                {
-                    // Obtém o ID do veículo selecionado
-                    int id = Convert.ToInt32(dgvVeiculos.SelectedRows[0].Cells["Id"].Value);
-
-                    // Usando a classe ConexaoBD para obter a conexão
-                    MySqlConnection conexao = ConexaoBD.GetConnection();
-
-                    if (conexao != null)
-                    {
-                        // Criação do comando SQL para atualização
-                        string query = "UPDATE Veiculos SET Placa = @Placa, Chassi = @Chassi, Marca = @Marca, Modelo = @Modelo, " +
-                                       "AnoFabricacao = @AnoFabricacao, AnoModelo = @AnoModelo, ValorFipe = @ValorFipe, ValorVenda = @ValorVenda, Observacoes = @Observacoes " +
-                                       "WHERE Id = @Id";
-
-                        Veiculo veiculo = ObterVeiculo();
-
-                        MySqlCommand cmd = new MySqlCommand(query, conexao);
-
-                        cmd.Parameters.AddWithValue("@Placa", veiculo.Placa);
-                        cmd.Parameters.AddWithValue("@Chassi", veiculo.Chassi);
-                        cmd.Parameters.AddWithValue("@Marca", veiculo.Marca);
-                        cmd.Parameters.AddWithValue("@Modelo", veiculo.Modelo);
-                        cmd.Parameters.AddWithValue("@AnoFabricacao", veiculo.AnoFabricacao);
-                        cmd.Parameters.AddWithValue("@AnoModelo", veiculo.AnoModelo);
-                        cmd.Parameters.AddWithValue("@ValorFipe", veiculo.ValorFipe);
-                        cmd.Parameters.AddWithValue("@ValorVenda", veiculo.ValorVenda);
-                        cmd.Parameters.AddWithValue("@Observacoes", veiculo.Observacoes);
-
-                        // Executa o comando
-                        cmd.ExecuteNonQuery();
-
-                        MessageBox.Show("Veículo atualizado com sucesso!");
-
-                        // Atualiza a exibição no DataGridView
-                        CarregarVeiculos();
-
-                        // Fecha a conexão após o uso
-                        conexao.Close();
-                    }
-                }
-                else
-                {
-                    MessageBox.Show("Selecione um veículo para editar.");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Erro: " + ex.Message);
-            }
-        }
-
-
-        private void btnExcluir_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (dgvVeiculos.SelectedRows.Count > 0)
-                {
-                    // Obtém o ID do veículo selecionado
-                    int id = Convert.ToInt32(dgvVeiculos.SelectedRows[0].Cells["Id"].Value);
-
-                    // Confirmação antes de excluir
-                    DialogResult result = MessageBox.Show("Tem certeza que deseja excluir este veículo?", "Confirmação de Exclusão", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (result == DialogResult.Yes)
-                    {
-                        // Usando a classe ConexaoBD para obter a conexão
-                        MySqlConnection conexao = ConexaoBD.GetConnection();
-
-                        if (conexao != null)
-                        {
-                            // Criação do comando SQL para exclusão
-                            string query = "DELETE FROM Veiculos WHERE Id = @Id";
-
-                            MySqlCommand cmd = new MySqlCommand(query, conexao);
-                            cmd.Parameters.AddWithValue("@Id", id);
-
-                            // Executa o comando
-                            cmd.ExecuteNonQuery();
-
-                            MessageBox.Show("Veículo excluído com sucesso!");
-
-                            // Atualiza a exibição no DataGridView
-                            CarregarVeiculos();
-
-                            // Fecha a conexão após o uso
-                            conexao.Close();
-                        }
-                    }
-                }
-                else
-                {
-                    MessageBox.Show("Selecione um veículo para excluir.");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Erro: " + ex.Message);
-            }
-        }
-
 
         private void dgvVeiculos_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
 
         }
 
-        private void dgvVeiculos_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void txtModelo_TextChanged(object sender, EventArgs e)
         {
-            if (e.RowIndex >= 0) // Certifique-se de que a linha clicada é válida
-            {
-                DataGridViewRow row = dgvVeiculos.Rows[e.RowIndex];
 
-                txtPlaca.Text = row.Cells["Placa"].Value.ToString();
-                txtChassi.Text = row.Cells["Chassi"].Value.ToString();
-                txtMarca.Text = row.Cells["Marca"].Value.ToString();
-                txtModelo.Text = row.Cells["Modelo"].Value.ToString();
-                txtAnoFabricacao.Text = row.Cells["AnoFabricacao"].Value.ToString();
-                txtAnoModelo.Text = row.Cells["AnoModelo"].Value.ToString();
-                txtValorFipe.Text = row.Cells["ValorFipe"].Value.ToString();
-                txtValorVenda.Text = row.Cells["ValorVenda"].Value.ToString();
-                txtObservacoes.Text = row.Cells["Observacoes"].Value.ToString();
-            }
         }
 
+        private void txtValorVenda_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtMarca_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void cmbModelo_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
     }
 }
