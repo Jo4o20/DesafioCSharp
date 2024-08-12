@@ -1,7 +1,6 @@
 Este projeto é uma aplicação desktop desenvolvida em C# utilizando Windows Forms e MySQL, com o objetivo de gerenciar o cadastro de veículos. A aplicação permite ao usuário adicionar, editar, excluir e visualizar veículos registrados em um banco de dados. O projeto também faz uso de APIs para carregar informações adicionais, como a lista de marcas de veículos.
-Estrutura do Projeto
 
-O projeto está estruturado da seguinte forma:
+Estrutura do Projeto
 
 - Data: Contém a classe ConexaoBD, responsável pela conexão com o banco de dados MySQL.
 - Models: Contém as classes de modelos que representam as entidades do banco de dados e dados retornados das APIs.
