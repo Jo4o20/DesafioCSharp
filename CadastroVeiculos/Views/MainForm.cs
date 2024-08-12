@@ -24,14 +24,22 @@ namespace CadastroVeiculos.Views
         }
 
         private void RegisterEventHandlers()
-        {
-            // Eventos dos botões e do DataGridView
-            dgvVeiculos.CellClick += dgvVeiculos_CellClick;
-            btnEditar.Click += btnEditar_Click;
-            btnExcluir.Click += btnExcluir_Click;
+        {                                               //evita clique duplo em todas as ações
+            btnAdicionar.Click -= btnAdicionar_Click; // Remove o evento antes de adicionar novamente
             btnAdicionar.Click += btnAdicionar_Click;
+
+            btnEditar.Click -= btnEditar_Click; // Remove o evento antes de adicionar novamente
+            btnEditar.Click += btnEditar_Click;
+
+            btnExcluir.Click -= btnExcluir_Click; // Remove o evento antes de adicionar novamente
+            btnExcluir.Click += btnExcluir_Click;
+
+            btnLimpar.Click -= btnLimpar_Click; // Remove o evento antes de adicionar novamente
             btnLimpar.Click += btnLimpar_Click;
-            cmbMarcas.SelectedIndexChanged += cmbMarcas_SelectedIndexChanged;  // Adiciona o evento para quando a marca é selecionada
+
+            cmbMarcas.SelectedIndexChanged -= cmbMarcas_SelectedIndexChanged; // Remove o evento antes de adicionar novamente
+            cmbMarcas.SelectedIndexChanged += cmbMarcas_SelectedIndexChanged;
+
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -74,7 +82,7 @@ namespace CadastroVeiculos.Views
                 Placa = txtPlaca.Text,
                 Chassi = txtChassi.Text,
                 Marca = cmbMarcas.Text,  // Obtém o nome da marca selecionada no ComboBox
-                Modelo = string.Empty,  // Sem uso, manter como string vazia ou remover da inserção no banco
+                Modelo = txtModelo.Text,  // Sem uso, manter como string vazia ou remover da inserção no banco
                 AnoFabricacao = int.Parse(txtAnoFabricacao.Text),
                 AnoModelo = int.Parse(txtAnoModelo.Text),
                 ValorFipe = decimal.Parse(txtValorFipe.Text),
@@ -142,8 +150,8 @@ namespace CadastroVeiculos.Views
 
                         cmd.Parameters.AddWithValue("@Placa", veiculo.Placa);
                         cmd.Parameters.AddWithValue("@Chassi", veiculo.Chassi);
-                        cmd.Parameters.AddWithValue("@Marca", veiculo.Marca);
-                        cmd.Parameters.AddWithValue("@Modelo", veiculo.Modelo);  // Pode ser removido ou substituído
+                        cmd.Parameters.AddWithValue("@Marca", veiculo.Marca);// Pode ser removido ou substituído
+                        cmd.Parameters.AddWithValue("@Modelo", veiculo.Modelo);  
                         cmd.Parameters.AddWithValue("@AnoFabricacao", veiculo.AnoFabricacao);
                         cmd.Parameters.AddWithValue("@AnoModelo", veiculo.AnoModelo);
                         cmd.Parameters.AddWithValue("@ValorFipe", veiculo.ValorFipe);
@@ -278,11 +286,6 @@ namespace CadastroVeiculos.Views
         }
 
         private void txtValorVenda_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void txtMarca_TextChanged(object sender, EventArgs e)
         {
 
         }

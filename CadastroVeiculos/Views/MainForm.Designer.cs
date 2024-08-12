@@ -50,7 +50,6 @@
             txtObservacoes = new TextBox();
             dgvVeiculos = new DataGridView();
             txtModelo = new TextBox();
-            txtMarca = new TextBox();
             cmbMarcas = new ComboBox();
             ((System.ComponentModel.ISupportInitialize)dgvVeiculos).BeginInit();
             SuspendLayout();
@@ -249,18 +248,10 @@
             txtModelo.TabIndex = 24;
             txtModelo.TextChanged += txtModelo_TextChanged;
             // 
-            // txtMarca
-            // 
-            txtMarca.Location = new Point(123, 64);
-            txtMarca.Name = "txtMarca";
-            txtMarca.Size = new Size(121, 23);
-            txtMarca.TabIndex = 25;
-            txtMarca.TextChanged += txtMarca_TextChanged;
-            // 
             // cmbMarcas
             // 
             cmbMarcas.FormattingEnabled = true;
-            cmbMarcas.Location = new Point(123, 286);
+            cmbMarcas.Location = new Point(123, 64);
             cmbMarcas.Name = "cmbMarcas";
             cmbMarcas.Size = new Size(121, 23);
             cmbMarcas.TabIndex = 26;
@@ -272,7 +263,6 @@
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1393, 450);
             Controls.Add(cmbMarcas);
-            Controls.Add(txtMarca);
             Controls.Add(txtModelo);
             Controls.Add(dgvVeiculos);
             Controls.Add(txtObservacoes);
@@ -327,7 +317,6 @@
         private TextBox txtObservacoes;
         private DataGridView dgvVeiculos;
         private TextBox txtModelo;
-        private TextBox txtMarca;
         private ComboBox cmbMarcas;
     }
 }
