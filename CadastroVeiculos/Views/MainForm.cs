@@ -1,4 +1,5 @@
 ﻿using CadastroVeiculos.Data;
+using CadastroVeiculos.Models;
 using CadastroVeiculos.Service;
 using MySql.Data.MySqlClient;
 using System;
@@ -66,6 +67,24 @@ namespace CadastroVeiculos.Views
                 MessageBox.Show("Erro: " + ex.Message);
             }
         }
+
+        private Veiculo ObterVeiculo()
+        {
+            Veiculo veiculo = new Veiculo();
+
+            veiculo.Placa = txtPlaca.Text;
+            veiculo.Chassi = txtChassi.Text;
+            veiculo.Marca = txtMarca.Text;
+            veiculo.Modelo = txtModelo.Text;
+            veiculo.AnoFabricacao = int.Parse(txtAnoFabricacao.Text);
+            veiculo.AnoModelo = int.Parse(txtAnoModelo.Text);
+            veiculo.ValorFipe = decimal.Parse(txtValorFipe.Text);
+            veiculo.ValorVenda = decimal.Parse(txtValorVenda.Text);
+            veiculo.Observacoes = txtObservacoes.Text;
+
+            return veiculo;
+        }
+
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
@@ -140,21 +159,27 @@ namespace CadastroVeiculos.Views
                     string query = "INSERT INTO Veiculos (Placa, Chassi, Marca, Modelo, AnoFabricacao, AnoModelo, ValorFipe, ValorVenda, Observacoes) " +
                                    "VALUES (@Placa, @Chassi, @Marca, @Modelo, @AnoFabricacao, @AnoModelo, @ValorFipe, @ValorVenda, @Observacoes)";
 
+                    Veiculo veiculo = ObterVeiculo();
+
                     MySqlCommand cmd = new MySqlCommand(query, conexao);
-                    cmd.Parameters.AddWithValue("@Placa", txtPlaca.Text);
-                    cmd.Parameters.AddWithValue("@Chassi", txtChassi.Text);
-                    cmd.Parameters.AddWithValue("@Marca", txtMarca.Text);
-                    cmd.Parameters.AddWithValue("@Modelo", txtModelo.Text);
-                    cmd.Parameters.AddWithValue("@AnoFabricacao", txtAnoFabricacao.Text);
-                    cmd.Parameters.AddWithValue("@AnoModelo", txtAnoModelo.Text);
-                    cmd.Parameters.AddWithValue("@ValorFipe", txtValorFipe.Text);
-                    cmd.Parameters.AddWithValue("@ValorVenda", txtValorVenda.Text);
-                    cmd.Parameters.AddWithValue("@Observacoes", txtObservacoes.Text);
+
+                    cmd.Parameters.AddWithValue("@Placa", veiculo.Placa);
+                    cmd.Parameters.AddWithValue("@Chassi", veiculo.Chassi);
+                    cmd.Parameters.AddWithValue("@Marca", veiculo.Marca);
+                    cmd.Parameters.AddWithValue("@Modelo", veiculo.Modelo);
+                    cmd.Parameters.AddWithValue("@AnoFabricacao", veiculo.AnoFabricacao);
+                    cmd.Parameters.AddWithValue("@AnoModelo", veiculo.AnoModelo);
+                    cmd.Parameters.AddWithValue("@ValorFipe", veiculo.ValorFipe);
+                    cmd.Parameters.AddWithValue("@ValorVenda", veiculo.ValorVenda);
+                    cmd.Parameters.AddWithValue("@Observacoes", veiculo.Observacoes);
+
 
                     // Executa o comando
                     cmd.ExecuteNonQuery();
 
                     MessageBox.Show("Veículo adicionado com sucesso!");
+
+                    CarregarVeiculos();
 
                     // Fecha a conexão após o uso
                     conexao.Close();
@@ -200,17 +225,19 @@ namespace CadastroVeiculos.Views
                                        "AnoFabricacao = @AnoFabricacao, AnoModelo = @AnoModelo, ValorFipe = @ValorFipe, ValorVenda = @ValorVenda, Observacoes = @Observacoes " +
                                        "WHERE Id = @Id";
 
+                        Veiculo veiculo = ObterVeiculo();
+
                         MySqlCommand cmd = new MySqlCommand(query, conexao);
-                        cmd.Parameters.AddWithValue("@Id", id);
-                        cmd.Parameters.AddWithValue("@Placa", txtPlaca.Text);
-                        cmd.Parameters.AddWithValue("@Chassi", txtChassi.Text);
-                        cmd.Parameters.AddWithValue("@Marca", txtMarca.Text);
-                        cmd.Parameters.AddWithValue("@Modelo", txtModelo.Text);
-                        cmd.Parameters.AddWithValue("@AnoFabricacao", txtAnoFabricacao.Text);
-                        cmd.Parameters.AddWithValue("@AnoModelo", txtAnoModelo.Text);
-                        cmd.Parameters.AddWithValue("@ValorFipe", txtValorFipe.Text);
-                        cmd.Parameters.AddWithValue("@ValorVenda", txtValorVenda.Text);
-                        cmd.Parameters.AddWithValue("@Observacoes", txtObservacoes.Text);
+
+                        cmd.Parameters.AddWithValue("@Placa", veiculo.Placa);
+                        cmd.Parameters.AddWithValue("@Chassi", veiculo.Chassi);
+                        cmd.Parameters.AddWithValue("@Marca", veiculo.Marca);
+                        cmd.Parameters.AddWithValue("@Modelo", veiculo.Modelo);
+                        cmd.Parameters.AddWithValue("@AnoFabricacao", veiculo.AnoFabricacao);
+                        cmd.Parameters.AddWithValue("@AnoModelo", veiculo.AnoModelo);
+                        cmd.Parameters.AddWithValue("@ValorFipe", veiculo.ValorFipe);
+                        cmd.Parameters.AddWithValue("@ValorVenda", veiculo.ValorVenda);
+                        cmd.Parameters.AddWithValue("@Observacoes", veiculo.Observacoes);
 
                         // Executa o comando
                         cmd.ExecuteNonQuery();
