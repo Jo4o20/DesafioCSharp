@@ -1,7 +1,3 @@
-Aqui está o README formatado para ser usado no GitHub:
-Cadastro de Veículos
-Descrição do Projeto
-
 Este projeto é uma aplicação desktop desenvolvida em C# utilizando Windows Forms e MySQL, com o objetivo de gerenciar o cadastro de veículos. A aplicação permite ao usuário adicionar, editar, excluir e visualizar veículos registrados em um banco de dados. O projeto também faz uso de APIs para carregar informações adicionais, como a lista de marcas de veículos.
 Estrutura do Projeto
 
